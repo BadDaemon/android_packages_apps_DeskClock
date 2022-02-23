@@ -17,6 +17,7 @@
 package com.android.deskclock.alarms.dataadapter;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
@@ -26,9 +27,14 @@ import com.android.deskclock.AlarmUtils;
 import com.android.deskclock.ItemAdapter;
 import com.android.deskclock.ItemAnimator;
 import com.android.deskclock.R;
+import com.android.deskclock.data.DataModel;
+import com.android.deskclock.data.Weekdays;
 import com.android.deskclock.provider.Alarm;
 import com.android.deskclock.provider.AlarmInstance;
+import com.android.deskclock.widget.EllipsizeLayout;
 import com.android.deskclock.widget.TextTime;
+
+import java.util.Calendar;
 
 /**
  * Abstract ViewHolder for alarm time items.
@@ -53,15 +59,23 @@ public abstract class AlarmItemViewHolder extends ItemAdapter.ItemViewHolder<Ala
     public final CompoundButton onOff;
     public final ImageView arrow;
     public final TextView preemptiveDismissButton;
+    public final TextView daysOfWeek;
+    public final TextView upcomingInstanceLabel;
+    public final EllipsizeLayout ellipsizeLayout;
 
     public AlarmItemViewHolder(View itemView) {
         super(itemView);
+        Log.d("MICHAEL", "created AlarmItemViewHolder");
 
         clock = (TextTime) itemView.findViewById(R.id.digital_clock);
         onOff = (CompoundButton) itemView.findViewById(R.id.onoff);
         arrow = (ImageView) itemView.findViewById(R.id.arrow);
+        daysOfWeek = (TextView) itemView.findViewById(R.id.days_of_week);
+        upcomingInstanceLabel = (TextView) itemView.findViewById(R.id.upcoming_instance_label);
         preemptiveDismissButton =
                 (TextView) itemView.findViewById(R.id.preemptive_dismiss_button);
+        ellipsizeLayout  = (EllipsizeLayout) itemView.findViewById(R.id.ellipse_layout);
+        Log.d("MICHAEL", "ellipsizeLayout " + ellipsizeLayout);
         preemptiveDismissButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -116,5 +130,32 @@ public abstract class AlarmItemViewHolder extends ItemAdapter.ItemViewHolder<Ala
             preemptiveDismissButton.setClickable(false);
         }
         return canBind;
+    }
+
+    protected void bindRepeatText(Context context, Alarm alarm) {
+        if (alarm.daysOfWeek.isRepeating()) {
+            final Weekdays.Order weekdayOrder = DataModel.getDataModel().getWeekdayOrder();
+            final String daysOfWeekText = alarm.daysOfWeek.toString(context, weekdayOrder);
+            daysOfWeek.setText(daysOfWeekText);
+
+            final String string = alarm.daysOfWeek.toAccessibilityString(context, weekdayOrder);
+            daysOfWeek.setContentDescription(string);
+
+            daysOfWeek.setVisibility(View.VISIBLE);
+        } else {
+            daysOfWeek.setVisibility(View.GONE);
+        }
+    }
+
+    protected void bindUpcomingInstance(Context context, Alarm alarm) {
+        if (alarm.daysOfWeek.isRepeating()) {
+            upcomingInstanceLabel.setVisibility(View.GONE);
+        } else {
+            upcomingInstanceLabel.setVisibility(View.VISIBLE);
+            final String labelText = Alarm.isTomorrow(alarm, Calendar.getInstance()) ?
+                    context.getString(R.string.alarm_tomorrow) :
+                    context.getString(R.string.alarm_today);
+            upcomingInstanceLabel.setText(labelText);
+        }
     }
 }
